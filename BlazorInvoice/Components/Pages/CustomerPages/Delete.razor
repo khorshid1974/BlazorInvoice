@@ -1,0 +1,61 @@
+﻿@page "/customers/delete"
+@inject BlazorInvoice.Data.InvoiceDbContext DB
+@using BlazorInvoice.Models
+@inject NavigationManager NavigationManager
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Delete</PageTitle>
+
+<h1>Delete</h1>
+
+<h3>Are you sure you want to delete this?</h3>
+<div>
+    <h4>Customer</h4>
+    <hr />
+    @if (customer is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <dl class="row">
+            <dt class="col-sm-2">Name</dt>
+            <dd class="col-sm-10">@customer.Name</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">Address</dt>
+            <dd class="col-sm-10">@customer.Address</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">Phone</dt>
+            <dd class="col-sm-10">@customer.Phone</dd>
+        </dl>
+        <EditForm method="post" Model="customer" OnValidSubmit="DeleteCustomer" FormName="delete" Enhance>
+            <button type="submit" class="btn btn-danger" disabled="@(customer is null)">Delete</button> |
+            <a href="/customers">Back to List</a>
+        </EditForm>
+    }
+</div>
+
+@code {
+    Customer? customer;
+
+    [SupplyParameterFromQuery]
+    public int Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        customer = await DB.Customer.FirstOrDefaultAsync(m => m.Id == Id);
+
+        if (customer is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    public async Task DeleteCustomer()
+    {
+        DB.Customer.Remove(customer!);
+        await DB.SaveChangesAsync();
+        NavigationManager.NavigateTo("/customers");
+    }
+}

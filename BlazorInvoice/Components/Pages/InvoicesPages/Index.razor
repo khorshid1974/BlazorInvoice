@@ -1,0 +1,59 @@
+﻿@page "/invoices/index"
+@rendermode InteractiveServer
+@using BlazorInvoice.Models
+@using Microsoft.EntityFrameworkCore
+@inject BlazorInvoice.Data.InvoiceDbContext dbContext
+@inject NavigationManager NavigationManager
+
+
+<div class="d-flex flex-column-reverse justify-content-between">
+    <a class="btn btn-outline-primary" href="/invoices/New">Create New</a>   
+</div>    
+@* show the invoices as table formatted using bootstrap *@
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Invoice Number</th>
+            <th>Invoice Date</th>
+            <th>Customer Name</th>
+            <th>Amount</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var invoice in invoices)
+        {
+            <tr>
+                <td>@invoice.Id</td>
+                <td>@invoice.InvoiceDate</td>
+                <td>@invoice.Customer.Name</td>
+                <td>@invoice.Payment</td>
+                <td>
+                    <button class="btn btn-primary" @onclick="() => EditInvoice(invoice.Id)">Edit</button>
+                    <button class="btn btn-danger" @onclick="() => DeleteInvoice(invoice.Id)">Delete</button>
+                </td>
+            </tr>
+        }
+    </tbody>    
+    </table>
+
+
+
+@code {
+// read all invoices from the database
+    List<Invoice> invoices = new List<Invoice>();
+    protected override async Task OnInitializedAsync()
+    {
+        invoices = await dbContext.Invoices.Include(x=>x.Customer).ToListAsync();
+    }
+
+    void EditInvoice(int id)
+    {
+        NavigationManager.NavigateTo($"/invoices/edit/{id}");
+    }
+
+    void DeleteInvoice(int id)
+    {
+        NavigationManager.NavigateTo($"/invoices/delete/{id}");
+    }
+}

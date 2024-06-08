@@ -1,0 +1,25 @@
+﻿@page "/customers"
+@using Microsoft.AspNetCore.Components.QuickGrid
+@inject BlazorInvoice.Data.InvoiceDbContext DB
+@using BlazorInvoice.Models
+
+<PageTitle>Index</PageTitle>
+
+<h1>Index</h1>
+
+<p>
+    <a href="customers/create">Create New</a>
+</p>
+
+<QuickGrid Class="table" Items="DB.Customer">
+    <PropertyColumn Property="customer => customer.Name" />
+    <PropertyColumn Property="customer => customer.Address" />
+    <PropertyColumn Property="customer => customer.Phone" />
+
+    <TemplateColumn Context="customer">
+        <a href="@($"customers/edit?id={customer.Id}")">Edit</a> |
+        <a href="@($"customers/details?id={customer.Id}")">Details</a> |
+        <a href="@($"customers/delete?id={customer.Id}")">Delete</a>
+        <a href="@($"customers/status?id={customer.Id}")">Status</a>
+    </TemplateColumn>
+</QuickGrid>

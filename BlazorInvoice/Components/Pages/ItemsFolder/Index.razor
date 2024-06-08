@@ -1,0 +1,63 @@
+﻿@page "/items"
+@using BlazorInvoice.Models
+@using Microsoft.EntityFrameworkCore
+<h3>Index</h3>
+@inject BlazorInvoice.Data.InvoiceDbContext dbContext
+@attribute [StreamRendering(true)]
+<table class="table">
+    <thead>
+        <tr>
+            <th>Item Name</th>
+            <th>Purchase Price</th>
+            <th>Quantity</th>
+            <th>Sale Price</th>
+            <th>Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Items == null || Items.Count==0)
+        {
+            <tr>
+                <td colspan="5">No Items</td>
+            </tr>
+        }
+        else{
+            
+                @foreach (var item in Items)
+                {
+                <tr>
+                    <td>@item.ItemName</td>
+                    <td>@item.PurchasePrice</td>
+                    <td>@item.Quantity</td>
+                    <td>@item.SalePrice</td>
+                    <td>@(item.Quantity * item.SalePrice)</td>
+                </tr>
+                }
+           
+        } 
+       
+        <tr>
+            <td>Total</td>
+            <td></td>
+            <td></td>
+            <td></td>
+          
+        </tr>
+    </tbody>
+    </table>
+
+@code {
+    public List<Item> Items { get; set; } = null;
+
+    // read Items on page initialization
+    protected override async Task  OnInitializedAsync()
+    {
+       // Items= dbContext.Items.ToList();
+        Items =await dbContext.Items.ToListAsync();
+
+    }
+    
+  
+}
+
+

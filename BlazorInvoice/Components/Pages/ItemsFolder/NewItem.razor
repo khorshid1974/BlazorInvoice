@@ -1,0 +1,37 @@
+﻿@page "/items/new"
+@using BlazorInvoice.Models
+@inject BlazorInvoice.Data.InvoiceDbContext  dbContext
+@inject NavigationManager NavigationManager
+<h3>NewItem</h3>
+<EditForm method="post" Model="@item" OnValidSubmit="AddItem" FormName="NewItem" >
+    <DataAnnotationsValidator />
+   @* add forms fileld *@
+  <ValidationSummary />
+   <label>Item Name</label>
+   <InputText @bind-Value="item.ItemName" />
+   <ValidationMessage For="()=> item.ItemName"/>
+   <label>Purchase Price</label>
+    <InputNumber @bind-Value="item.PurchasePrice" />
+    <ValidationMessage For="()=>item.PurchasePrice"></ValidationMessage>
+    <label>Quantity</label>
+    <InputNumber @bind-Value="item.Quantity" />
+    <ValidationMessage For="()=>item.Quantity"></ValidationMessage>
+    <label>Sale Price</label>
+    <InputNumber @bind-Value="item.SalePrice" />
+    <ValidationMessage For="()=>item.SalePrice"></ValidationMessage>
+    <button type="submit">Add</button>
+  
+</EditForm>
+
+@code {
+    [SupplyParameterFromForm]
+    public Item item { get; set; } = new Item();
+    private async Task AddItem()
+    {
+       
+        dbContext.Items.Add(item);
+        await dbContext.SaveChangesAsync();
+        NavigationManager.NavigateTo("/");
+    }
+    
+}

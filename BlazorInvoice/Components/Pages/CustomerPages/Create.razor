@@ -1,0 +1,53 @@
+﻿@page "/customers/create"
+@inject BlazorInvoice.Data.InvoiceDbContext DB
+@using BlazorInvoice.Models
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create</PageTitle>
+
+<h1>Create</h1>
+
+<h4>Customer</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" Model="Customer" OnValidSubmit="AddCustomer" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+            <div class="mb-3">
+                <label for="name" class="form-label">Name:</label> 
+                <InputText id="name" @bind-Value="Customer.Name" class="form-control" /> 
+                <ValidationMessage For="() => Customer.Name" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="address" class="form-label">Address:</label> 
+                <InputText id="address" @bind-Value="Customer.Address" class="form-control" /> 
+                <ValidationMessage For="() => Customer.Address" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="phone" class="form-label">Phone:</label> 
+                <InputText id="phone" @bind-Value="Customer.Phone" class="form-control" /> 
+                <ValidationMessage For="() => Customer.Phone" class="text-danger" /> 
+            </div>        
+            <button type="submit" class="btn btn-primary">Create</button>
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    <a href="/customers">Back to List</a>
+</div>
+
+@code {
+
+    [SupplyParameterFromForm]
+    public Customer Customer { get; set; } = new();
+
+    // To protect from overposting attacks, see https://aka.ms/RazorPagesCRUD
+    public async Task AddCustomer()
+    {
+        DB.Customer.Add(Customer);
+        await DB.SaveChangesAsync();
+        NavigationManager.NavigateTo("/customers");
+    }
+}

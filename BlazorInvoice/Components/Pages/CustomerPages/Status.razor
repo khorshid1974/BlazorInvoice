@@ -1,0 +1,151 @@
+﻿@page "/customers/status"
+@using BlazorInvoice.Models
+@using BlazorInvoice.ViewModels
+@using Microsoft.EntityFrameworkCore
+@inject BlazorInvoice.Data.InvoiceDbContext DB
+@rendermode InteractiveServer
+<h3>Status</h3>
+
+    @if (Customer is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <div class="row">
+            <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+                @foreach(var invoice in Customer.Invoices)
+                {
+                    var tabName= "tab" + invoice.Id.ToString();
+                    <li class="nav-item m-1" role="presentation">
+                        <button class="btn btn-outline-info"  type="button" @onclick="()=>showInvoicePayments(invoice.Id)" >Invoice @invoice.Id</button>
+                    </li>
+                }
+            
+   
+            </ul>
+
+          
+        </div>
+        <div>
+            <h3>Invoices Table</h3>
+       
+        
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th> Id </th>
+                        <th> Name </th>
+                        <th> Price </th>
+                        <th> Quantity</th>
+                        <th> Total </th>
+                       
+                    </tr>
+                   
+                </thead>
+                <tbody>
+                @if (InvoiceItems is not null)
+                {
+                     @foreach (var invoiceItem in InvoiceItems)
+                {
+                    <tr>
+                        <td>@invoiceItem.Id</td>
+                        <td> @invoiceItem.Item.ItemName </td>
+                        <td>@invoiceItem.SalePrice</td>
+                        <td>@invoiceItem.Quantity</td>
+                        <td>@invoiceItem.Total</td>
+                    </tr>
+                    
+                }
+                <tr>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td>Total</td>
+                    <td>@InvoiceItems.Sum(i => i.Total)</td
+                 </tr>
+                }
+               
+                </tbody>
+            </table>
+        
+    </div>
+    <div class="row row-cols-4 ">
+        @if(Payments is not null)
+        @foreach (var payment in Payments)
+        {
+            var bgClass = payment.Paid ? "bg-success" : "bg-warning";
+            <div class="card text-white @bgClass bg-gradient mb-3 col m-1" style="max-width: 18rem;">
+                <div class="card-header">@payment.Date.ToShortDateString()</div>
+                <div class="card-body">
+                    <div class="d-flex flex-row justify-content-between">
+                        <h5 class="card-title"> @payment.Amount : @payment.Currency - @payment.Paid</h5>
+                            <input class="bg-warning" type="checkbox" @bind="@payment.Paid" @bind:after="()=> saveThePayment(payment.Id)" />
+                    </div>
+
+                    <p class="card-text">@payment.Id Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                </div>
+            </div>
+        }
+
+    </div>
+
+
+    }
+
+
+@code {
+    [SupplyParameterFromQuery]
+    public int Id { get; set; }
+    public Customer Customer { get; set; }
+    private int InvoiceCount { get; set; } = 0;
+    private List<Payment> Payments { get; set; }
+    private List<InvoiceItem> InvoiceItems { get; set; }
+    public void showInvoicePayments(int Id)
+    {
+        Payments = DB.Payments.Where(p => p.InvoiceId == Id).ToList();
+        InvoiceItems = DB.InvoiceItems.Where(i => i.InvoiceId == Id).Include(x => x.Item).ToList();
+    }
+    private void saveThePayment(int Id)
+    {
+        var payment = Payments.Where(p => p.Id == Id).FirstOrDefault();
+        //payment.Paid = !payment.Paid;
+        DB.Payments.Update(payment);
+        DB.SaveChanges();
+    }
+    private void CheckboxChanged()
+    {
+        Console.WriteLine($"Checkbox changed:");
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Customer = await DB.Customer.Where(m => m.Id == Id).Include(x => x.Invoices).FirstOrDefaultAsync();
+        InvoiceCount = await DB.Invoices.Where(i => i.CustomerId == Id).CountAsync();
+        var status= from c in DB.Customer
+                     join i in DB.Invoices on c.Id equals i.CustomerId
+                     join p in DB.Payments on i.Id equals p.InvoiceId
+                     where c.Id == Id
+                     select new CustomerStatus
+        
+                     {
+                         Id= c.Id,
+                         Name= c.Name,
+                         Address= c.Address,
+                         Phone= c.Phone,
+                         InvoiceId= i.Id,
+                         InvoiceDate= i.InvoiceDate,
+                         InvoiceAmount= i.Payment,
+                         PaymentDate= i.InvoiceDate,
+                         Currency= i.Currency,
+                         PaymentAmount= p.Amount,
+                         Paid= p.Paid,
+
+                         };
+
+                     }  
+
+    }
+
+
+

@@ -1,0 +1,276 @@
+﻿@page "/invoices/new"
+@rendermode InteractiveServer
+
+
+@using BlazorInvoice.Models
+@using Microsoft.EntityFrameworkCore
+@inject BlazorInvoice.Data.InvoiceDbContext dbContext
+@inject NavigationManager NavigationManager
+
+@* <form data-permanent>
+    hi<input type="search" title="Search bar" />
+</form> *@
+<div class="d-flex justify-content-between">
+    <div>
+        <InputText @bind-Value="item.SearchText" />
+        <button @onclick="SearchItems">اضافة</button>
+       
+    </div>
+    <div>
+        <button class="btn btn-primary" @onclick="SaveInvoice">
+            Save Invoice
+            <i class="fas fa-save"></i>
+        </button>
+
+    </div>
+    <div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="CurrencyRadio" id="dollarRadio" value="option1" @onclick="()=> HandleCurrency(Currency.USD)" checked>
+            <label class="form-check-label" for="dollarRadio">
+               $ Dollar
+            </label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="CurrencyRadio" id="DinarRadio" value="option2" @onclick="()=> HandleCurrency(Currency.DINAR)">
+            <label class="form-check-label" for="DinarRadio">
+                Dinar
+            </label>
+            @if(selectedCurrency==Currency.DINAR)
+            {
+                <input class="form-control" type="number" @bind-value="DollarBoDinar" />
+            }
+           
+        </div>
+    </div>
+    <div>
+        <select class="form-select" @bind="CustomerId">
+            <option value="0" selected>Select Customer</option>
+            @foreach (var customer in Customers)
+            {
+                <option value="@customer.Id">@customer.Name</option>
+            }
+        </select>
+    </div>
+</div>
+
+@if (Items != null)
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Item Name</th>
+                <th>Purchase Price</th>
+                <th>Quantity</th>
+                <th>Sale Price</th>
+                <th>Total</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Items)
+            {
+                <tr>
+                    <td>@item.ItemName</td>
+                    <td>@item.PurchasePrice</td>
+                    <td>
+                        <button class="btn btn-primary" @onclick="() => item.Quantity--">-</button>
+                        @item.Quantity
+                        <button class="btn btn-primary" @onclick="() => item.Quantity++">+</button>
+                     </td>
+                    <td>@item.SalePrice</td>
+                    <td>@(item.Quantity * item.SalePrice)</td>
+                    <td>
+                        <button class="btn btn-primary" @onclick="() => DeleteSelectedItem(item.Id)">Delete</button>
+                    </td>
+                </tr>
+            }
+            <tr>
+                <td>Total</td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td>@Items.Sum(x => x.Quantity * x.SalePrice)</td>
+            </tr>
+        </tbody>
+    </table>
+  
+
+    <div>
+
+    </div>
+}
+  @* 4 radio boxes for payment method @**@
+  <div class="d-flex justify-content-start mx-3">
+    <div class="form-check border border-1">
+        <input class="form-check-input" type="radio" name="exampleRadios" id="exampleRadios1" value="option1" @onclick="()=> HandleSelction(12)" checked>
+        <label class="form-check-label" for="exampleRadios1">
+           12 Months
+        </label>
+    </div>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="exampleRadios" id="exampleRadios2" value="option2" @onclick="()=> HandleSelction(10)">
+        <label class="form-check-label" for="exampleRadios2">
+           10 Months
+        </label>
+    </div>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="exampleRadios" id="exampleRadios1" value="option1" @onclick="()=> HandleSelction(8)" >
+        <label class="form-check-label" for="exampleRadios1">
+           8 Months
+        </label>
+    </div>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="exampleRadios" id="exampleRadios2" value="option2" @onclick="()=> HandleSelction(6)">
+        <label class="form-check-label" for="exampleRadios2">
+            6 Months
+        </label>
+    </div>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="exampleRadios" id="exampleRadios1" value="option1" @onclick="()=> HandleSelction(4)" >
+        <label class="form-check-label" for="exampleRadios1">
+           4 Months
+        </label>
+    </div>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="exampleRadios" id="exampleRadios2" value="option2" @onclick="()=> HandleSelction(2)">
+        <label class="form-check-label" for="exampleRadios2">
+           2 Months
+        </label>
+    </div>
+   
+  </div>
+  <div class="row row-cols-5 ">
+    @foreach(var payment in payments)
+    {
+        <div class="card text-white bg-info bg-gradient mb-3 col m-1" style="max-width: 18rem;">
+            <div class="card-header">@payment.Date.ToShortDateString()</div>
+            <div class="card-body">
+                <div class="d-flex flex-row justify-content-between">
+                    <h5 class="card-title" > @payment.Amount : @selectedCurrency</h5>
+                    <input class="bg-warning" type="checkbox" @bind-value="payment.Paid" />
+                </div>
+               
+                <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+            </div>
+        </div>
+    }
+
+  </div>
+
+@code {
+    [SupplyParameterFromForm]
+    public SearchOption item { get; set; } = new SearchOption();
+    // property for Item List
+    public List<Item> Items { get; set; } = new List<Item>();
+    // property for Customer List
+    public List<Customer> Customers { get; set; } = new List<Customer>();
+    public int CustomerId { get; set; }
+    private int NoOfMonths { get; set; } = 12;
+    private Currency    selectedCurrency=Currency.USD;
+    private int DollarBoDinar = 0;
+    // List of payments
+    private List<Payment> payments = new List<Payment>();
+    protected override async Task OnInitializedAsync()
+    {
+        // read all customers from the database
+        Customers = await dbContext.Customer.ToListAsync();
+    }
+    private void HandleCurrency(Currency currency)
+    {
+        selectedCurrency = currency;
+        HandleSelction(NoOfMonths);
+    }
+    private void HandleSelction(int noOfMonths)
+    {
+        NoOfMonths=noOfMonths;
+        // selectedValue = value;
+        payments.Clear();
+
+        if (noOfMonths > 0)
+        {
+
+            var totalAmount = Items.Sum(x=>x.Quantity * x.SalePrice); // Replace with your actual total amount
+            if (selectedCurrency == Currency.DINAR && DollarBoDinar > 0)
+            {
+                totalAmount = totalAmount * DollarBoDinar;
+            }
+            else if (selectedCurrency == Currency.DINAR && DollarBoDinar == 0) return;
+
+            var amountPerPayment = Math.Round(totalAmount / (double)NoOfMonths, 2);
+            var currentDate = DateTime.Now;
+
+            for (int i = 0; i < NoOfMonths; i++)
+            {
+                payments.Add(new Payment { Date = currentDate.AddMonths(i), Amount = (int)amountPerPayment });
+            }
+        }
+    }
+    private void DeleteSelectedItem(int id)
+    {
+        Items.Remove(Items.First(x => x.Id == id));
+    }
+    void doSomething()
+    {
+        Console.WriteLine("doSomething");
+    }
+    private async Task SearchItems()
+    {
+        if (item.SearchText == null)
+        {
+            item.SearchText="LED";
+        }
+        var newItems= await dbContext.Items.Where(x=>x.ItemName.Contains(item.SearchText)).ToListAsync();
+        foreach(var i in newItems)
+        {
+            if (Items.Any(x=>x.ItemName.Contains(i.ItemName)))
+            {
+                Items.Where(x=> x.Id==i.Id).ToList().ForEach(x=>x.Quantity++);
+                continue;
+            } else
+            {
+                i.Quantity=1;
+                Items.Add(i);
+            }
+
+         };
+        // dbContext.Items.Add(item);
+        // await dbContext.SaveChangesAsync();
+        // NavigationManager.NavigateTo("/");
+    }
+    private async Task SaveInvoice()
+    {
+        var invoice=new Invoice();
+        invoice.InvoiceDate=DateTime.Now;
+        invoice.CustomerId=CustomerId;  
+        invoice.Payment=Items.Sum(x=>x.Quantity*x.SalePrice);
+        invoice.Currency=selectedCurrency;  
+        dbContext.Invoices.Add(invoice);
+        await dbContext.SaveChangesAsync();
+        List<InvoiceItem> InvoiceItems = Items.Select(item => new InvoiceItem 
+        { 
+            SalePrice = item.SalePrice,
+            ItemId = item.Id,
+            Quantity = item.Quantity,
+            InvoiceId=invoice.Id
+        }).ToList();
+        foreach(var i in InvoiceItems)
+        {
+            dbContext.InvoiceItems.Add(i);
+        }
+        await dbContext.SaveChangesAsync();
+
+        // save the payments
+        foreach (var payment in payments)
+        {
+            payment.InvoiceId = invoice.Id;
+            payment.Currency = selectedCurrency;
+         
+        }
+        await dbContext.Payments.AddRangeAsync(payments);
+        await dbContext.SaveChangesAsync();
+        NavigationManager.NavigateTo("Invoices/Index");
+    }
+    public class SearchOption {
+        public string SearchText { get; set; }
+    }
+}
