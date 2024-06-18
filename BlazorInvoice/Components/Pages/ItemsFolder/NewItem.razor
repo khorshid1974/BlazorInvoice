@@ -2,24 +2,39 @@
 @using BlazorInvoice.Models
 @inject BlazorInvoice.Data.InvoiceDbContext  dbContext
 @inject NavigationManager NavigationManager
-<h3>NewItem</h3>
+<div class="d-flex justify-content-between">
+    <h3>اضافة مادة جديدة</h3>
+    <a class="btn btn-primary" href="/items">العودة</a>
+</div>
+
 <EditForm method="post" Model="@item" OnValidSubmit="AddItem" FormName="NewItem" >
     <DataAnnotationsValidator />
    @* add forms fileld *@
   <ValidationSummary />
-   <label>Item Name</label>
-   <InputText @bind-Value="item.ItemName" />
-   <ValidationMessage For="()=> item.ItemName"/>
-   <label>Purchase Price</label>
-    <InputNumber @bind-Value="item.PurchasePrice" />
-    <ValidationMessage For="()=>item.PurchasePrice"></ValidationMessage>
-    <label>Quantity</label>
-    <InputNumber @bind-Value="item.Quantity" />
-    <ValidationMessage For="()=>item.Quantity"></ValidationMessage>
-    <label>Sale Price</label>
-    <InputNumber @bind-Value="item.SalePrice" />
-    <ValidationMessage For="()=>item.SalePrice"></ValidationMessage>
-    <button type="submit">Add</button>
+  
+   <div >
+        <label class="text-dark">مادة جديدة </label>
+        <InputText class="form-control" @bind-Value="item.ItemName" />
+        <ValidationMessage For="()=> item.ItemName"/>
+   </div>
+    <div >
+        <label> سعر الشراء</label>
+         <InputNumber class="form-control" @bind-Value="item.PurchasePrice" />
+        <ValidationMessage For="()=>item.PurchasePrice"></ValidationMessage>
+    </div>
+ 
+    <div>
+        <label>العدد</label>
+        <InputNumber class="form-control" @bind-Value="item.Quantity" />
+        <ValidationMessage For="()=>item.Quantity"></ValidationMessage>
+    </div>
+    <div >
+        <label>سعر البيع </label>
+        <InputNumber class="form-control" @bind-Value="item.SalePrice" />
+        <ValidationMessage For="()=>item.SalePrice"></ValidationMessage>
+    </div>
+ 
+    <button class="btn btn-outline" type="submit">اضافة</button>
   
 </EditForm>
 

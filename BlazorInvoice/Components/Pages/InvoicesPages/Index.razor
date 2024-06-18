@@ -4,6 +4,20 @@
 @using Microsoft.EntityFrameworkCore
 @inject BlazorInvoice.Data.InvoiceDbContext dbContext
 @inject NavigationManager NavigationManager
+@using BlazorInvoice.Components.Useful
+
+
+<Modal @ref="modal" Title="تاكيد الحذف">
+    <BodyTemplate>
+       هل انت متاكد من حذف الفاتورة
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Secondary" @onclick="OnHideModalClick">Close</Button>
+        <Button @onclick="DeleteInvoice" Color="ButtonColor.Danger">احذف</Button>
+    </FooterTemplate>
+</Modal>
+
+
 
 
 <div class="d-flex flex-column-reverse justify-content-between">
@@ -30,7 +44,7 @@
                 <td>@invoice.Payment</td>
                 <td>
                     <button class="btn btn-primary" @onclick="() => EditInvoice(invoice.Id)">Edit</button>
-                    <button class="btn btn-danger" @onclick="() => DeleteInvoice(invoice.Id)">Delete</button>
+                    <button class="btn btn-danger" @onclick="() => OnShowModalClick(invoice.Id)">Delete</button>
                 </td>
             </tr>
         }
@@ -42,6 +56,35 @@
 @code {
 // read all invoices from the database
     List<Invoice> invoices = new List<Invoice>();
+    int InvoiceIdToDelete=0;
+    
+   private Modal modal;
+
+    private async Task OnShowModalClick(int id)
+    {
+        InvoiceIdToDelete=id;
+        await modal?.ShowAsync();
+    }
+
+    private async Task OnHideModalClick()
+    {
+        await modal?.HideAsync();
+    }
+
+    private async Task DeleteInvoice()
+    {
+        var invoice = await dbContext.Invoices.FindAsync(InvoiceIdToDelete);
+        if (invoice == null)
+        {
+            return;
+        }
+        dbContext.Invoices.Remove(invoice);
+        await dbContext.SaveChangesAsync();
+        
+        invoices = await dbContext.Invoices.Include(x=>x.Customer).ToListAsync();
+        await modal?.HideAsync();
+    }
+
     protected override async Task OnInitializedAsync()
     {
         invoices = await dbContext.Invoices.Include(x=>x.Customer).ToListAsync();

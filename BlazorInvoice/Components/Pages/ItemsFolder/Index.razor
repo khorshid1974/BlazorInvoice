@@ -1,17 +1,22 @@
 ﻿@page "/items"
 @using BlazorInvoice.Models
 @using Microsoft.EntityFrameworkCore
-<h3>Index</h3>
+
 @inject BlazorInvoice.Data.InvoiceDbContext dbContext
 @attribute [StreamRendering(true)]
+<div class="d-flex justify-content-between">
+    <h3>المواد</h3>
+    <a class="btn btn-primary" href="/items/new">اضافة مادة جديدة</a>
+</div>
+
 <table class="table">
     <thead>
         <tr>
-            <th>Item Name</th>
-            <th>Purchase Price</th>
-            <th>Quantity</th>
-            <th>Sale Price</th>
-            <th>Total</th>
+            <th>اسم المادة</th>
+            <th>سعر الشراء</th>
+            <th>العدد</th>
+            <th>سعر البيع</th>
+            <th>المجموع</th>
         </tr>
     </thead>
     <tbody>
@@ -33,16 +38,16 @@
                     <td>@(item.Quantity * item.SalePrice)</td>
                 </tr>
                 }
-           
+             <tr class="bg-warning">
+                <td>المجموع</td>
+                <td>@Items.Sum(x=>x.PurchasePrice) </td>
+                <td>@Items.Sum(x=>x.Quantity)</td>
+                <td>@Items.Sum(x=>x.SalePrice)</td>
+                <td>@Items.Sum(x=>x.Quantity * x.SalePrice)</td>
+            </tr>
         } 
        
-        <tr>
-            <td>Total</td>
-            <td></td>
-            <td></td>
-            <td></td>
-          
-        </tr>
+      
     </tbody>
     </table>
 
