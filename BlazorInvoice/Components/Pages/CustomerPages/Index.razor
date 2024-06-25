@@ -1,7 +1,11 @@
 ﻿@page "/customers"
 @using Microsoft.AspNetCore.Components.QuickGrid
 @inject BlazorInvoice.Data.InvoiceDbContext DB
+@rendermode InteractiveServer
 @using BlazorInvoice.Models
+@using System.Linq;
+@using Microsoft.Data.SqlClient;
+@using Microsoft.EntityFrameworkCore;
 <style>
   .quickgrid-table {
     width: 100%;
@@ -29,38 +33,240 @@
 }
 </style>
 <PageTitle>Index</PageTitle>
+<button @onclick="GetCustomersWithPaymentStatus">All</button>
+<button @onclick="() => { customers = customers.Distinct(new CustomerNameComparer()).OrderBy(c => c.Name).ToList(); }">Sort by Name</button>
+<button @onclick="() => { customers = customers.Where(x=>x.Status == Status.Active && x.PaymentStatus != PaymentStatus.Early).OrderBy(c => SortedCustomersIds.IndexOf(c.Id)).ToList(); }">Sort by Status</button>
+<button @onclick="() => { customers = customers.OrderBy(c => SortedCustomersIds.IndexOf(c.Id)).ToList(); }">Hi</button>
 <div class="d-flex justify-content-between">
     <h3>الزبائن</h3>
     <a class="btn btn-primary" href="/customers/create">اضافة زبون جديد</a>
 </div>
+<table class="table">
+    <thead>
+        <tr>
+            <th>الاسم</th>
+            <th>العنوان</th>
+            <th>الهاتف</th>
+            <th>الحالة</th>
+            <th>الدفع</th>
+            <th>التحكم</th>
+        </tr>
+    </thead>
+    <tbody>
+        
+        @foreach (var customer in customers)
+        {
+            var bgClass= customer.PaymentStatus switch
+            {
+                PaymentStatus.late => "bg-danger",
+                PaymentStatus.upComing => "bg-warning",
+                PaymentStatus.paid => "bg-success",
+                PaymentStatus.Early => "bg-info",
+                PaymentStatus.Inactive => "bg-secondary",
+                _ => ""
+            };
+            <tr>
+                <td>@customer.Name</td>
+                <td>@customer.Address</td>
+                <td>@customer.Phone</td>
+                <td >@customer.Status</td>
+                <td> <label class="@bgClass form-control"> @customer.PaymentStatus</label></td>
+                <td>
+                    <a href="@($"customers/edit?id={customer.Id}")">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pen-fill" viewBox="0 0 16 16">
+                        <path d="m13.498.795.149-.149a1.207 1.207 0 1 1 1.707 1.708l-.149.148a1.5 1.5 0 0 1-.059 2.059L4.854 14.854a.5.5 0 0 1-.233.131l-4 1a.5.5 0 0 1-.606-.606l1-4a.5.5 0 0 1 .131-.232l9.642-9.642a.5.5 0 0 0-.642.056L6.854 4.854a.5.5 0 1 1-.708-.708L9.44.854A1.5 1.5 0 0 1 11.5.796a1.5 1.5 0 0 1 1.998-.001"/>
+                        </svg>
+                    </a> |
+                    <a href="@($"customers/details?id={customer.Id}")">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-credit-card-2-front" viewBox="0 0 16 16">
+                        <path d="M14 3a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM2 2a2 2 0 0 0" />
+                    </svg></a>
+                      <a href="@($"customers/delete?id={customer.Id}")">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-x btn-danger" viewBox="0 0 16 16">
+                        <path d="M6.146 6.146a.5.5 0 0 1 .708 0L8 7.293l1.146-1.147a.5.5 0 1 1 .708.708L8.707 8l1.147 1.146a.5.5 0 0 1-.708.708L8 8.707 6.854 9.854a.5.5 0 0 1-.708-.708L7.293 8 6.146 6.854a.5.5 0 0 1 0-.708"/>
+                        <path d="M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2zm0 1h8a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1"/>
+                        </svg>
+                    </a>
+                    <a href="@($"customers/status?id={customer.Id}")">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-currency-dollar" viewBox="0 0 16 16">
+                        <path d="M4 10.781c.148 1.667 1.513 2.85 3.591 3.003V15h1.043v-1.216c2.27-.179 3.678-1.438 3.678-3.3 0-1.59-.947-2.51-2.956-3.028l-.722-.187V3.467c1.122.11 1.879.714 2.07 1.616h1.47c-.166-1.6-1.54-2.748-3.54-2.875V1H7.591v1.233c-1.939.23-3.27 1.472-3.27 3.156 0 1.454.966 2.483 2.661 2.917l.61.162v4.031c-1.149-.17-1.94-.8-2.131-1.718zm3.391-3.836c-1.043-.263-1.6-.825-1.6-1.616 0-.944.704-1.641 1.8-1.828v3.495l-.2-.05zm1.591 1.872c1.287.323 1.852.859 1.852 1.769 0 1.097-.826 1.828-2.2 1.939V8.73z"/>
+                        </svg>
+                    </a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
 
 
-<QuickGrid Class="table" style="margin-top: 10px;;" Items="DB.Customer">
-    <PropertyColumn Property="customer => customer.Name" />
-    <PropertyColumn Property="customer => customer.Address" />
-    <PropertyColumn Property="customer => customer.Phone" />
 
-    <TemplateColumn Context="customer">
-        <a href="@($"customers/edit?id={customer.Id}")">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pen-fill" viewBox="0 0 16 16">
-            <path d="m13.498.795.149-.149a1.207 1.207 0 1 1 1.707 1.708l-.149.148a1.5 1.5 0 0 1-.059 2.059L4.854 14.854a.5.5 0 0 1-.233.131l-4 1a.5.5 0 0 1-.606-.606l1-4a.5.5 0 0 1 .131-.232l9.642-9.642a.5.5 0 0 0-.642.056L6.854 4.854a.5.5 0 1 1-.708-.708L9.44.854A1.5 1.5 0 0 1 11.5.796a1.5 1.5 0 0 1 1.998-.001"/>
-            </svg>
-        </a> |
-        <a href="@($"customers/details?id={customer.Id}")">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-credit-card-2-front" viewBox="0 0 16 16">
-            <path d="M14 3a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM2 2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/>
-            <path d="M2 5.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5zm0 3a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5m3 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5m3 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5m3 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5"/>
-            </svg></a> 
-        <a href="@($"customers/delete?id={customer.Id}")">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-x btn-danger" viewBox="0 0 16 16">
-            <path d="M6.146 6.146a.5.5 0 0 1 .708 0L8 7.293l1.146-1.147a.5.5 0 1 1 .708.708L8.707 8l1.147 1.146a.5.5 0 0 1-.708.708L8 8.707 6.854 9.854a.5.5 0 0 1-.708-.708L7.293 8 6.146 6.854a.5.5 0 0 1 0-.708"/>
-            <path d="M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2zm0 1h8a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1"/>
-            </svg>
-        </a>
-        <a href="@($"customers/status?id={customer.Id}")">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-currency-dollar" viewBox="0 0 16 16">
-            <path d="M4 10.781c.148 1.667 1.513 2.85 3.591 3.003V15h1.043v-1.216c2.27-.179 3.678-1.438 3.678-3.3 0-1.59-.947-2.51-2.956-3.028l-.722-.187V3.467c1.122.11 1.879.714 2.07 1.616h1.47c-.166-1.6-1.54-2.748-3.54-2.875V1H7.591v1.233c-1.939.23-3.27 1.472-3.27 3.156 0 1.454.966 2.483 2.661 2.917l.61.162v4.031c-1.149-.17-1.94-.8-2.131-1.718zm3.391-3.836c-1.043-.263-1.6-.825-1.6-1.616 0-.944.704-1.641 1.8-1.828v3.495l-.2-.05zm1.591 1.872c1.287.323 1.852.859 1.852 1.769 0 1.097-.826 1.828-2.2 1.939V8.73z"/>
-            </svg>
-        </a>
-    </TemplateColumn>
-</QuickGrid>
+@code {
+    
+    List<CustomCustomer> customers;
+    List<MiniCustomCustomer> results;
+    List<int> SortedCustomersIds;
+    protected override void OnInitialized()
+    {
+               
+
+      results= DB.Database.SqlQueryRaw<MiniCustomCustomer>($" SELECT c.Id,  MIN(p.Date) AS PaymentDate FROM Customer c JOIN Invoices i ON c.Id = i.CustomerId JOIN Payments p ON i.Id = p.InvoiceId WHERE p.Paid = 'false' GROUP BY c.Id, c.Name ORDER BY PaymentDate ASC;").ToList();
+        SortedCustomersIds = results.Select(c => c.Id).ToList();
+          @* var sortedCustomers = (
+            from c in DB.Customer
+            let upcomingUnpaidPaymentDate = (
+                from i in DB.Invoices join p in DB.Payments on  i.Id equals p.InvoiceId
+               where c.Id == i.CustomerId
+                where p.Paid == false
+                select p.Date
+            ).Min()
+            where upcomingUnpaidPaymentDate != null
+            orderby upcomingUnpaidPaymentDate
+            select  new CustomCustomer {
+                            Id = c.Id,
+                            Name = c.Name,
+                            Address = c.Address,
+                            Phone = c.Phone,
+                            Status = Status.Inactive,
+                            PaymentStatus = PaymentStatus.paid
+                            }
+        ); 
+
+        customers = DB.Customer
+            .Select(c => new 
+            {
+                Customer = c,
+                UpcomingUnpaidPaymentDate = c.Invoices
+                    .SelectMany(i => i.Payments)
+                    .Where(p => p.Paid == false)
+                    .Min(p => (DateTime?)p.Date)
+            })
+            .Where(c => c.UpcomingUnpaidPaymentDate != null)
+            .OrderBy(c => c.UpcomingUnpaidPaymentDate)
+            .Select(c =>   new CustomCustomer {
+                            Id = c.Customer.Id,
+                            Name = c.Customer.Name,
+                            Address = c.Customer.Address,
+                            Phone = c.Customer.Phone,
+                            Status = Status.Inactive,
+                            PaymentStatus = PaymentStatus.paid
+                            
+                        
+                        }); *@
+            @* .Distinct(); *@
+
+        // return unique customers
+
+        customers = (from c in DB.Customer join i in DB.Invoices on c.Id equals i.CustomerId
+                                            join p in DB.Payments on i.Id equals p.InvoiceId
+                                            where p.Paid == false
+                        orderby p.Date ascending
+                        select new CustomCustomer {
+                            Id = c.Id,
+                            Name = c.Name,
+                            Address = c.Address,
+                            Phone = c.Phone,
+                            //paid = i.Paid,
+                            Status = Status.Active,
+                            PaymentStatus = p.Date < DateTime.Now ? PaymentStatus.late : p.Date < DateTime.Now.AddDays(30) && p.Date > DateTime.Now ? PaymentStatus.upComing : PaymentStatus.Early
+                        }  ).Distinct().ToList(); 
+        var customersWithoutInvoices = (from c in DB.Customer join i in DB.Invoices on c.Id equals i.CustomerId into gj
+                        from sub in gj.DefaultIfEmpty()
+                        where sub == null
+                        select  new CustomCustomer {
+                            Id = c.Id,
+                            Name = c.Name,
+                            Address = c.Address,
+                            Phone = c.Phone,
+                            Status = Status.Inactive,
+                            PaymentStatus = PaymentStatus.Inactive
+                        
+                        } ).Distinct();
+         customers= customers.Concat(customersWithoutInvoices).ToList();
+        //DB.Customer = DB.Customer.ToList();
+    }
+    public void GetCustomersWithPaymentStatus()
+    {
+        // return unique customers
+        customers = (from c in DB.Customer
+                        join i in DB.Invoices on c.Id equals i.CustomerId
+                        join p in DB.Payments on i.Id equals p.InvoiceId
+                        where p.Paid == false
+                        orderby p.Date ascending
+                        select new CustomCustomer
+                        {
+                            Id = c.Id,
+                            Name = c.Name,
+                            Address = c.Address,
+                            Phone = c.Phone,
+                            //paid = i.Paid,
+                            Status = Status.Active,
+                            PaymentStatus = p.Date < DateTime.Now ? PaymentStatus.late : p.Date < DateTime.Now.AddDays(30) && p.Date > DateTime.Now ? PaymentStatus.upComing : PaymentStatus.Early
+                        }).Distinct().ToList();
+
+        var customersWithoutInvoices = (from c in DB.Customer
+                                        join i in DB.Invoices on c.Id equals i.CustomerId into gj
+                                        from sub in gj.DefaultIfEmpty()
+                                        where sub == null
+                                        select new CustomCustomer
+                                        {
+                                            Id = c.Id,
+                                            Name = c.Name,
+                                            Address = c.Address,
+                                            Phone = c.Phone,
+                                            Status = Status.Inactive,
+                                            PaymentStatus = PaymentStatus.Inactive
+
+                                        }).Distinct();
+
+        customers = customers.Concat(customersWithoutInvoices).ToList();
+
+        //return customers;
+    }
+    public enum Status
+    {
+        Active,
+        Inactive
+    }
+    public enum PaymentStatus
+    {
+        late, upComing, paid, Early, Inactive
+    }
+
+
+    public class CustomCustomer
+    {
+        public int Id { get; set; }
+        public string? Name { get; set; }
+        public string? Address { get; set; }
+        public string? Phone { get; set; }
+        public Status? Status { get; set; }
+        public DateTime PaymentDate { get; set; }
+        public PaymentStatus? PaymentStatus { get; set; }
+        public bool paid { get; set; }
+
+    }
+     private class MiniCustomCustomer
+    {
+        public int Id { get; set; }
+        @* public string? Name { get; set; } *@
+       
+        public DateTime PaymentDate { get; set; }
+        
+
+    }
+
+        public class CustomerNameComparer : IEqualityComparer<CustomCustomer>
+{
+    public bool Equals(CustomCustomer x, CustomCustomer y)
+    {
+        if (Object.ReferenceEquals(x, y)) return true;
+        if (x == null || y == null) return false;
+        return x.Name == y.Name;
+    }
+
+    public int GetHashCode(CustomCustomer obj)
+    {
+        return obj.Name == null ? 0 : obj.Name.GetHashCode();
+    }
+}
+}

@@ -1,7 +1,17 @@
 ﻿@page "/items/new"
 @using BlazorInvoice.Models
+@using Microsoft.EntityFrameworkCore
 @inject BlazorInvoice.Data.InvoiceDbContext  dbContext
 @inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<style>
+    .table {
+        width: 100%;
+        margin-top: 20px;
+        color: gray;
+    }
+</style>
 <div class="d-flex justify-content-between">
     <h3>اضافة مادة جديدة</h3>
     <a class="btn btn-primary" href="/items">العودة</a>
@@ -14,7 +24,7 @@
   
    <div >
         <label class="text-dark">مادة جديدة </label>
-        <InputText class="form-control" @bind-Value="item.ItemName" />
+        <InputText class="form-control" @bind-Value="item.ItemName" @oninput="searchForSimilarItems" />
         <ValidationMessage For="()=> item.ItemName"/>
    </div>
     <div >
@@ -38,9 +48,33 @@
   
 </EditForm>
 
+<table class="table text-secondary">
+    <thead>
+        <tr>
+            <th>اسم المادة</th>
+            <th>سعر الشراء</th>
+            <th>العدد</th>
+            <th>سعر البيع</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in SimilarItems)
+        {
+            <tr>
+                <td>@item.ItemName</td>
+                <td>@item.PurchasePrice</td>
+                <td>@item.Quantity</td>
+                <td>@item.SalePrice</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
 @code {
     [SupplyParameterFromForm]
     public Item item { get; set; } = new Item();
+
+    public List<Item> SimilarItems { get; set; } = new List<Item>();
     private async Task AddItem()
     {
        
@@ -49,4 +83,12 @@
         NavigationManager.NavigateTo("/");
     }
     
+    private async Task searchForSimilarItems(ChangeEventArgs e)
+    {
+        var itemName = e.Value.ToString();
+        if(itemName.Length > 2)
+        SimilarItems = await dbContext.Items.Where(i => i.ItemName.Contains(itemName)).ToListAsync();
+       
+       
+    }
 }
