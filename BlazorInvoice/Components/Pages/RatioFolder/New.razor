@@ -1,0 +1,46 @@
+﻿@page "/ratio/new"
+@using BlazorInvoice.Data
+@inject InvoiceDbContext dbContext
+@inject NavigationManager navigationManager
+@rendermode InteractiveServer
+<h3>New</h3>
+
+
+<form>
+    <div class="form-group">
+        <label for="fromAmount">From Amount</label>
+        <input type="text" class="form-control" id="fromAmount" placeholder="Enter From Amount" @bind="Ratio.FromAmount">
+    </div>
+    <div class="form-group">
+        <label for="toAmount">To Amount</label>
+        <input type="text" class="form-control" id="toAmount" placeholder="Enter To Amount" @bind="Ratio.ToAmount">
+    </div>
+    <div class="form-group">
+        <label for="ratioValue">Ratio Value</label>
+        <input type="text" class="form-control" id="ratioValue" placeholder="Enter Ratio Value" @bind="Ratio.Rate">
+    </div>
+    <button type="button" @onclick="SaveRatio" class="btn btn-primary">Save</button>
+</form>
+@code {
+   public Models.Ratio Ratio { get; set; } = new ();
+   [SupplyParameterFromQuery]
+   public int? Id { get; set; }
+
+    protected override void OnInitialized()
+    {
+         if (Id.HasValue)
+         {
+              Ratio = dbContext.Ratios.Find(Id);
+         }
+    }
+   private void SaveRatio()
+   {
+    if (Id == null)
+       dbContext.Ratios.Add(Ratio);
+    else
+         dbContext.Ratios.Update(Ratio);
+    dbContext.SaveChanges();
+    navigationManager.NavigateTo("/ratio/index");
+   }
+}
+

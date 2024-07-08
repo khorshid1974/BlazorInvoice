@@ -1,0 +1,54 @@
+﻿@page "/ratio/index"
+@inject Data.InvoiceDbContext dbContext
+
+@rendermode InteractiveServer
+<h3>Ratios</h3>
+<a class="btn btn-info" href="ratio/new">New</a>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Ratio From</th>
+            <th>Ratio To</th>
+            <th>Ratio Value</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var ratio in ratios)
+        {
+            <tr>
+                <td>@ratio.Id</td>
+                <td>@ratio.FromAmount</td>
+                <td>@ratio.ToAmount</td>
+                <td>@ratio.Rate</td>
+                <td>
+                    <a class="btn btn-info" href="ratio/new?id=@ratio.Id">Edit</a>
+                <buuton class="btn btn-danger" @onclick="()=>DeleteRatio(ratio)">Delete</buuton>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+@code {
+    List<Models.Ratio> ratios;
+    protected override void OnInitialized()
+    {
+        ratios = dbContext.Ratios.ToList();
+    }
+     public async Task DeleteRatio(Models.Ratio ratio)
+    {
+        try
+        {
+            dbContext.Ratios.Remove(ratio);
+            await dbContext.SaveChangesAsync();
+            ratios = dbContext.Ratios.ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+     
+     
+    }
+}

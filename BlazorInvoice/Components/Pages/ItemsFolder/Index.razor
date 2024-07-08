@@ -17,6 +17,7 @@
             <th>العدد</th>
             <th>سعر البيع</th>
             <th>المجموع</th>
+            <td>Actions</td>
         </tr>
     </thead>
     <tbody>
@@ -36,6 +37,9 @@
                     <td>@item.Quantity</td>
                     <td>@item.SalePrice</td>
                     <td>@(item.Quantity * item.SalePrice)</td>
+                     <td>
+                    <a class="btn btn-warning" href="/items/new?id=@item.Id" >Edit</a>
+                </td>
                 </tr>
                 }
              <tr class="bg-warning">
@@ -44,6 +48,7 @@
                 <td>@Items.Sum(x=>x.Quantity)</td>
                 <td>@Items.Sum(x=>x.SalePrice)</td>
                 <td>@Items.Sum(x=>x.Quantity * x.SalePrice)</td>
+               
             </tr>
         } 
        

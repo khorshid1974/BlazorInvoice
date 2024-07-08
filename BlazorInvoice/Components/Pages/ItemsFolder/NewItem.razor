@@ -44,7 +44,7 @@
         <ValidationMessage For="()=>item.SalePrice"></ValidationMessage>
     </div>
  
-    <button class="btn btn-outline" type="submit">اضافة</button>
+    <button class="btn btn-outline-primary" type="submit">اضافة</button>
   
 </EditForm>
 
@@ -73,14 +73,25 @@
 @code {
     [SupplyParameterFromForm]
     public Item item { get; set; } = new Item();
-
+    [SupplyParameterFromQuery]
+    public int Id {get; set;}= 0;
     public List<Item> SimilarItems { get; set; } = new List<Item>();
+    protected override void OnInitialized()
+    {
+         if (Id != 0)
+         {
+              item = dbContext.Items.Find(Id);
+         }
+    }
+        
     private async Task AddItem()
     {
-       
+       if(Id == 0)
         dbContext.Items.Add(item);
+        else
+         dbContext.Items.Update(item);
         await dbContext.SaveChangesAsync();
-        NavigationManager.NavigateTo("/");
+        NavigationManager.NavigateTo("/items");
     }
     
     private async Task searchForSimilarItems(ChangeEventArgs e)

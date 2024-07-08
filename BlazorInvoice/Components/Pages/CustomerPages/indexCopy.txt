@@ -1,4 +1,4 @@
-﻿@page "/customers"
+@page "/customers"
 @using Microsoft.AspNetCore.Components.QuickGrid
 @inject BlazorInvoice.Data.InvoiceDbContext DB
 @rendermode InteractiveServer
@@ -33,9 +33,10 @@
 }
 </style>
 <PageTitle>Index</PageTitle>
-<button @onclick="LoadCustomers">All</button>
+<button @onclick="GetCustomersWithPaymentStatus">All</button>
 <button @onclick="() => { customers = customers.Distinct(new CustomerNameComparer()).OrderBy(c => c.Name).ToList(); }">Sort by Name</button>
-<button @onclick="LoadCustomersByStatus">Sort by Status</button>
+<button @onclick="() => { customers = customers.Where(x=>x.Status == Status.Active && x.PaymentStatus != PaymentStatus.Early).OrderBy(c => SortedCustomersIds.IndexOf(c.Id)).ToList(); }">Sort by Status</button>
+<button @onclick="() => { customers = customers.OrderBy(c => SortedCustomersIds.IndexOf(c.Id)).ToList(); }">Hi</button>
 <div class="d-flex justify-content-between">
     <h3>الزبائن</h3>
     <a class="btn btn-primary" href="/customers/create">اضافة زبون جديد</a>
@@ -106,40 +107,56 @@
     List<int> SortedCustomersIds;
     protected override void OnInitialized()
     {
-        LoadCustomers();
-        @* GetCustomersWithPaymentStatus();
-        SortedCustomersIds = customers.Select(c => c.Id).ToList(); *@
-    }
+               
 
-    private void LoadCustomers()
-        {
-            customers = DB.Customer.Select(x => new CustomCustomer
-                {
-                    Id = x.Id,
-                    Name = x.Name,
-                    Address = x.Address,
-                    Phone = x.Phone,
-                    Status = Status.Active,
-                    PaymentStatus = PaymentStatus.Inactive
-                }).ToList();
-            
-           
-        
-        }
-    private void LoadCustomersByStatus()
-    {
-        @* results= DB.Database.SqlQueryRaw<MiniCustomCustomer>($" SELECT c.Id,  MIN(p.Date) AS PaymentDate FROM Customer c JOIN Invoices i ON c.Id = i.CustomerId JOIN Payments p ON i.Id = p.InvoiceId WHERE p.Paid = 'false' GROUP BY c.Id, c.Name ORDER BY PaymentDate ASC;").ToList();
-            SortedCustomersIds = results.Select(c => c.Id).ToList();
-        customers = DB.Customer.Where(x=> SortedCustomersIds.Contains(x.Id)).Select(x => new CustomCustomer
-        {
-            Id = x.Id,
-            Name = x.Name,
-            Address = x.Address,
-            Phone = x.Phone,
-            Status = Status.Active,
-            PaymentStatus = x.Date < DateTime.Now ? PaymentStatus.late : p.Date < DateTime.Now.AddDays(30) && p.Date > DateTime.Now ? PaymentStatus.upComing : PaymentStatus.Early
-        }).ToList(); *@
-         customers = (from c in DB.Customer join i in DB.Invoices on c.Id equals i.CustomerId
+      results= DB.Database.SqlQueryRaw<MiniCustomCustomer>($" SELECT c.Id,  MIN(p.Date) AS PaymentDate FROM Customer c JOIN Invoices i ON c.Id = i.CustomerId JOIN Payments p ON i.Id = p.InvoiceId WHERE p.Paid = 'false' GROUP BY c.Id, c.Name ORDER BY PaymentDate ASC;").ToList();
+        SortedCustomersIds = results.Select(c => c.Id).ToList();
+          @* var sortedCustomers = (
+            from c in DB.Customer
+            let upcomingUnpaidPaymentDate = (
+                from i in DB.Invoices join p in DB.Payments on  i.Id equals p.InvoiceId
+               where c.Id == i.CustomerId
+                where p.Paid == false
+                select p.Date
+            ).Min()
+            where upcomingUnpaidPaymentDate != null
+            orderby upcomingUnpaidPaymentDate
+            select  new CustomCustomer {
+                            Id = c.Id,
+                            Name = c.Name,
+                            Address = c.Address,
+                            Phone = c.Phone,
+                            Status = Status.Inactive,
+                            PaymentStatus = PaymentStatus.paid
+                            }
+        ); 
+
+        customers = DB.Customer
+            .Select(c => new 
+            {
+                Customer = c,
+                UpcomingUnpaidPaymentDate = c.Invoices
+                    .SelectMany(i => i.Payments)
+                    .Where(p => p.Paid == false)
+                    .Min(p => (DateTime?)p.Date)
+            })
+            .Where(c => c.UpcomingUnpaidPaymentDate != null)
+            .OrderBy(c => c.UpcomingUnpaidPaymentDate)
+            .Select(c =>   new CustomCustomer {
+                            Id = c.Customer.Id,
+                            Name = c.Customer.Name,
+                            Address = c.Customer.Address,
+                            Phone = c.Customer.Phone,
+                            Status = Status.Inactive,
+                            PaymentStatus = PaymentStatus.paid
+                            
+                        
+                        }); *@
+            @* .Distinct(); *@
+
+        // return unique customers
+
+        customers = (from c in DB.Customer join i in DB.Invoices on c.Id equals i.CustomerId
                                             join p in DB.Payments on i.Id equals p.InvoiceId
                                             where p.Paid == false
                         orderby p.Date ascending
@@ -150,8 +167,22 @@
                             Phone = c.Phone,
                             //paid = i.Paid,
                             Status = Status.Active,
-                            PaymentStatus = p.Date < DateTime.Now ? PaymentStatus.late : p.Date < DateTime.Now.AddDays(10) && p.Date > DateTime.Now ? PaymentStatus.upComing : PaymentStatus.Early
+                            PaymentStatus = p.Date < DateTime.Now ? PaymentStatus.late : p.Date < DateTime.Now.AddDays(30) && p.Date > DateTime.Now ? PaymentStatus.upComing : PaymentStatus.Early
                         }  ).Distinct().ToList(); 
+        var customersWithoutInvoices = (from c in DB.Customer join i in DB.Invoices on c.Id equals i.CustomerId into gj
+                        from sub in gj.DefaultIfEmpty()
+                        where sub == null
+                        select  new CustomCustomer {
+                            Id = c.Id,
+                            Name = c.Name,
+                            Address = c.Address,
+                            Phone = c.Phone,
+                            Status = Status.Inactive,
+                            PaymentStatus = PaymentStatus.Inactive
+                        
+                        } ).Distinct();
+         customers= customers.Concat(customersWithoutInvoices).ToList();
+        //DB.Customer = DB.Customer.ToList();
     }
     public void GetCustomersWithPaymentStatus()
     {
@@ -224,7 +255,7 @@
 
     }
 
-    public class CustomerNameComparer : IEqualityComparer<CustomCustomer>
+        public class CustomerNameComparer : IEqualityComparer<CustomCustomer>
 {
     public bool Equals(CustomCustomer x, CustomCustomer y)
     {

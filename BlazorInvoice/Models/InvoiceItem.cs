@@ -9,6 +9,7 @@
         public Item Item { get; set; }
         public int Quantity { get; set; }
         public int SalePrice { get; set; }
+        public int CostPrice { get; set; }
         public int Total { get
             {
                 return Quantity * SalePrice;

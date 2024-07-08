@@ -36,6 +36,7 @@
                     <tr>
                         <th> Id </th>
                         <th> Name </th>
+                        <th> purchase price </th>
                         <th> Price </th>
                         <th> Quantity</th>
                         <th> Total </th>
@@ -51,6 +52,7 @@
                     <tr>
                         <td>@invoiceItem.Id</td>
                         <td> @invoiceItem.Item.ItemName </td>
+                        <td>@invoiceItem.CostPrice</td>
                         <td>@invoiceItem.SalePrice</td>
                         <td>@invoiceItem.Quantity</td>
                         <td>@invoiceItem.Total</td>
@@ -62,7 +64,7 @@
                     <td></td>
                     <td></td>
                     <td>Total</td>
-                    <td>@InvoiceItems.Sum(i => i.Total)</td
+                    <td>@InvoiceItems.Sum(i => i.Total) :  @InvoicePayment =  @(InvoicePayment-InvoiceItems.Sum(i => i.Total)) </td
                  </tr>
                 }
                
@@ -101,8 +103,11 @@
     private int InvoiceCount { get; set; } = 0;
     private List<Payment> Payments { get; set; }
     private List<InvoiceItem> InvoiceItems { get; set; }
+    private int InvoicePayment { get; set; }=0;
     public void showInvoicePayments(int Id)
     {
+       
+        InvoicePayment= DB.Invoices.Where(p => p.Id == Id).FirstOrDefault().Payment;
         Payments = DB.Payments.Where(p => p.InvoiceId == Id).ToList();
         InvoiceItems = DB.InvoiceItems.Where(i => i.InvoiceId == Id).Include(x => x.Item).ToList();
     }

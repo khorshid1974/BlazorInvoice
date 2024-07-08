@@ -1,7 +1,8 @@
 ﻿@page "/invoices/new"
 @rendermode InteractiveServer
 
-
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@inject ProtectedSessionStorage ProtectedSessionStore
 @using BlazorInvoice.Models
 @using Microsoft.EntityFrameworkCore
 @inject BlazorInvoice.Data.InvoiceDbContext dbContext
@@ -11,36 +12,31 @@
     hi<input type="search" title="Search bar" />
 </form> *@
 <div class="d-flex justify-content-between">
-    <div>
-        <InputText @bind-Value="item.SearchText" />
-        <button @onclick="SearchItems">اضافة</button>
+    <div class="d-flex">
+        <InputText  class="form-control " @bind-Value="item.SearchText" />
+        <button class="btn btn-info" @onclick="SearchItems">اضافة</button>
        
     </div>
-    <div>
-        <button class="btn btn-primary" @onclick="SaveInvoice">
-            Save Invoice
-            <i class="fas fa-save"></i>
-        </button>
-
-    </div>
-    <div>
-        <div class="form-check">
-            <input class="form-check-input" type="radio" name="CurrencyRadio" id="dollarRadio" value="option1" @onclick="()=> HandleCurrency(Currency.USD)" checked>
+   
+    <div class="d-flex border border-primary rounded">
+        <div class="form-check m-2">
+            <input  class="form-check-input" type="radio" name="CurrencyRadio" id="dollarRadio" value="option1" @onclick="()=> HandleCurrency(Currency.USD)" checked>
             <label class="form-check-label" for="dollarRadio">
-               $ Dollar
+                Dollar
             </label>
         </div>
-        <div class="form-check">
+        <div class="form-check m-2">
             <input class="form-check-input" type="radio" name="CurrencyRadio" id="DinarRadio" value="option2" @onclick="()=> HandleCurrency(Currency.DINAR)">
             <label class="form-check-label" for="DinarRadio">
                 Dinar
             </label>
-            @if(selectedCurrency==Currency.DINAR)
-            {
-                <input class="form-control" type="number" @bind-value="DollarBoDinar" />
-            }
+           
            
         </div>
+         @if(selectedCurrency==Currency.DINAR)
+            {
+                <input style="width: 100px;" class="form-control m-1 rounded" type="number" @bind-value="DollarBoDinar" />
+            }
     </div>
     <div>
         <select class="form-select" @bind="CustomerId">
@@ -50,6 +46,13 @@
                 <option value="@customer.Id">@customer.Name</option>
             }
         </select>
+    </div>
+     <div>
+        <button class="btn btn-outline-primary" @onclick="SaveInvoice" disabled="@(Items.Count == 0 || CustomerId==0)">
+            Save Invoice
+            <i class="fas fa-save"></i>
+        </button>
+
     </div>
 </div>
 
@@ -62,7 +65,8 @@
                 <th>Purchase Price</th>
                 <th>Quantity</th>
                 <th>Sale Price</th>
-                <th>Total</th>
+                <th>Total Cost</th>
+                <td>Total Sale</td>
                 <th>Action</th>
             </tr>
         </thead>
@@ -73,23 +77,26 @@
                     <td>@item.ItemName</td>
                     <td>@item.PurchasePrice</td>
                     <td>
-                        <button class="btn btn-primary" @onclick="() => item.Quantity--">-</button>
+                        <button class="btn btn-warning" @onclick="async ()=> {item.Quantity--;  await findTotal(true);}">-</button>
                         @item.Quantity
-                        <button class="btn btn-primary" @onclick="() => item.Quantity++">+</button>
+                        <button class="btn btn-info" @onclick="async ()=> {item.Quantity++;  await findTotal(true);}">+</button>
                      </td>
                     <td>@item.SalePrice</td>
+                    <td>@(item.Quantity * item.PurchasePrice)</td>
                     <td>@(item.Quantity * item.SalePrice)</td>
                     <td>
-                        <button class="btn btn-primary" @onclick="() => DeleteSelectedItem(item.Id)">Delete</button>
+                        <svg  @onclick="() => DeleteSelectedItem(item.Id)" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3 text-danger" style="cursor: pointer;" viewBox="0 0 16 16">
+                        <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5M11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47M8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5"/>
+                        </svg>
+                       
                     </td>
                 </tr>
             }
             <tr>
-                <td>Total</td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td>@Items.Sum(x => x.Quantity * x.SalePrice)</td>
+                <td colspan="5">Total</td>
+               
+                <td><input type="number" @bind="TotalAfterAplllyingRatio" @bind:after="()=>findTotal()"  /> : @RatioOfProfit%</td>
+                <td class="font-weight-bold"> @TotalAfterAplllyingRatio -  @Items.Sum(x => x.Quantity * x.PurchasePrice) = @( TotalAfterAplllyingRatio -  Items.Sum(x => x.Quantity * x.PurchasePrice))</td>
             </tr>
         </tbody>
     </table>
@@ -137,6 +144,12 @@
            2 Months
         </label>
     </div>
+     <div class="form-check">
+        <input class="form-check-input" type="radio" name="exampleRadios" id="exampleRadios2" value="option2" @onclick="()=> HandleSelction(1)">
+        <label class="form-check-label" for="exampleRadios2">
+           1 Months
+        </label>
+    </div>
    
   </div>
   <div class="row row-cols-5 ">
@@ -164,32 +177,72 @@
     public List<Item> Items { get; set; } = new List<Item>();
     // property for Customer List
     public List<Customer> Customers { get; set; } = new List<Customer>();
-    public int CustomerId { get; set; }
+    public int CustomerId { get; set; } = 0;
     private int NoOfMonths { get; set; } = 12;
     private Currency    selectedCurrency=Currency.USD;
     private int DollarBoDinar = 0;
     // List of payments
     private List<Payment> payments = new List<Payment>();
+    private int TotalAfterAplllyingRatio { get; set; }
+    private int RatioOfProfit { get; set; }= 0;
     protected override async Task OnInitializedAsync()
     {
+       
         // read all customers from the database
         Customers = await dbContext.Customer.ToListAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var result = await ProtectedSessionStore.GetAsync<int>("DollarRate");
+            if (result.Success)
+            {
+                DollarBoDinar = result.Value;
+            }
+        }
     }
     private void HandleCurrency(Currency currency)
     {
         selectedCurrency = currency;
         HandleSelction(NoOfMonths);
     }
-    private void HandleSelction(int noOfMonths)
+
+    private async Task  findTotal(bool reCaculate=false) {
+        var total= Items.Sum(x=>x.Quantity * x.SalePrice);
+        if (TotalAfterAplllyingRatio > 0 && !reCaculate)
+        {
+            decimal profit = TotalAfterAplllyingRatio - (Items.Sum(x => x.Quantity * x.SalePrice));
+            RatioOfProfit = (int)((profit / (Items.Sum(x=>x.Quantity * x.SalePrice))) * 100);
+        } else if (TotalAfterAplllyingRatio == 0 || reCaculate){
+            var totalRatio= await dbContext.Ratios.Where(x=>x.FromAmount <= NoOfMonths && x.ToAmount >= NoOfMonths).FirstOrDefaultAsync();
+            if (totalRatio is null)
+            
+            TotalAfterAplllyingRatio= 0;
+            else
+            {
+                var t= totalRatio.Rate/100.0;
+                var b= total * t;
+                TotalAfterAplllyingRatio= (int)(b + total);
+                decimal profit = TotalAfterAplllyingRatio - (Items.Sum(x => x.Quantity * x.SalePrice));
+                RatioOfProfit = (int)((profit / (Items.Sum(x=>x.Quantity * x.SalePrice))) * 100);
+            }
+            
+        }
+        
+       // TotalAfterAplllyingRatio= (int)totalRatio.Rate/100  * total;
+    }
+    private async Task HandleSelction(int noOfMonths)
     {
         NoOfMonths=noOfMonths;
         // selectedValue = value;
         payments.Clear();
-
+        await findTotal(true);
         if (noOfMonths > 0)
         {
 
-            var totalAmount = Items.Sum(x=>x.Quantity * x.SalePrice); // Replace with your actual total amount
+            var totalAmount = TotalAfterAplllyingRatio;// Items.Sum(x=>x.Quantity * x.SalePrice); // Replace with your actual total amount
             if (selectedCurrency == Currency.DINAR && DollarBoDinar > 0)
             {
                 totalAmount = totalAmount * DollarBoDinar;
@@ -233,6 +286,7 @@
             }
 
          };
+        await findTotal();
         // dbContext.Items.Add(item);
         // await dbContext.SaveChangesAsync();
         // NavigationManager.NavigateTo("/");
@@ -242,13 +296,14 @@
         var invoice=new Invoice();
         invoice.InvoiceDate=DateTime.Now;
         invoice.CustomerId=CustomerId;  
-        invoice.Payment=Items.Sum(x=>x.Quantity*x.SalePrice);
+        invoice.Payment= TotalAfterAplllyingRatio;  //Items.Sum(x=>x.Quantity*x.SalePrice);
         invoice.Currency=selectedCurrency;  
         dbContext.Invoices.Add(invoice);
         await dbContext.SaveChangesAsync();
         List<InvoiceItem> InvoiceItems = Items.Select(item => new InvoiceItem 
         { 
             SalePrice = item.SalePrice,
+            CostPrice = item.PurchasePrice,
             ItemId = item.Id,
             Quantity = item.Quantity,
             InvoiceId=invoice.Id
@@ -268,6 +323,7 @@
         }
         await dbContext.Payments.AddRangeAsync(payments);
         await dbContext.SaveChangesAsync();
+        await ProtectedSessionStore.SetAsync("DollarRate", DollarBoDinar);
         NavigationManager.NavigateTo("Invoices/Index");
     }
     public class SearchOption {

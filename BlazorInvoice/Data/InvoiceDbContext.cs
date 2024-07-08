@@ -14,6 +14,7 @@ namespace BlazorInvoice.Data
         public DbSet<InvoiceItem> InvoiceItems { get; set; }
         public DbSet<BlazorInvoice.Models.Customer> Customer { get; set; } = default!;
         public DbSet<Payment> Payments { get; set; }
+        public DbSet<Ratio> Ratios { get; set; }
       
 
     }
